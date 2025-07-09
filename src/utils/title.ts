@@ -30,7 +30,7 @@ export default class TitleUtils {
     }
 
     static getDocTypeByFullTitle(fullTitle: string): DocType {
-        const [prefix, title] = this.getPrefixAndTitleByFullTitle(fullTitle);
+        const [prefix, _title] = this.getPrefixAndTitleByFullTitle(fullTitle);
         if (prefix === '분류') {
             return 'category';
         } else if (prefix === '위키') {

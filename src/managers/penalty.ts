@@ -1,6 +1,6 @@
 import type { User, UserName } from '../types/user';
 import type { PenaltyDoc, PenaltyType, PenaltyId } from '../types/penalty';
-import { WikiResponse, WikiResponseWithData } from '../types/general';
+import { WikiResponse } from '../types/general';
 
 import UserController from '../controllers/user.js';
 import PenaltyController from '../controllers/penalty.js';
@@ -16,7 +16,7 @@ export default class PenaltyManager {
         duration: number,
         comment: string,
         penalizer: User,
-    ): Promise<WikiResponse> {
+    ): Promise<WikiResponse<void>> {
         const penalizedUser = await UserController.getUserByName(penalizedName);
         if (!penalizedUser) return { ok: false, reason: '사용자가 존재하지 않습니다.' };
 
@@ -42,7 +42,7 @@ export default class PenaltyManager {
         if (penaltyType === 'block')
             await UserManager.changeGroupByEmail(penalizedUser.email, 'blocked', penalizer);
 
-        return { ok: true, reason: '' };
+        return { ok: true };
     }
 
     static async blockUserByName(
@@ -50,7 +50,7 @@ export default class PenaltyManager {
         duration: number,
         comment: string,
         penalizer: User,
-    ): Promise<WikiResponse> {
+    ): Promise<WikiResponse<void>> {
         return await this.#applyPenalty('block', penalizedName, duration, comment, penalizer);
     }
 
@@ -59,7 +59,7 @@ export default class PenaltyManager {
         duration: number,
         comment: string,
         penalizer: User,
-    ): Promise<WikiResponse> {
+    ): Promise<WikiResponse<void>> {
         return await this.#applyPenalty('warn', penalizedName, duration, comment, penalizer);
     }
 
@@ -67,14 +67,13 @@ export default class PenaltyManager {
         penaltyId: PenaltyId,
         comment: string,
         penalizer: User,
-    ): Promise<WikiResponseWithData<PenaltyDoc | undefined>> {
+    ): Promise<WikiResponse<PenaltyDoc>> {
         const res_penalty = AuthorityManager.canRemovePenalty(penalizer.group);
-        if (!res_penalty.ok) return { ...res_penalty, data: undefined };
+        if (!res_penalty.ok) return res_penalty;
 
         const penalty = await PenaltyController.getPenaltyById(penaltyId);
 
-        if (!penalty)
-            return { ok: false, reason: '경고 및 차단 내역이 존재하지 않습니다.', data: undefined };
+        if (!penalty) return { ok: false, reason: '경고 및 차단 내역이 존재하지 않습니다.' };
 
         await PenaltyController.deletePenaltyById(penaltyId);
 
@@ -82,38 +81,38 @@ export default class PenaltyManager {
         penalty.comment = comment;
         await LogManager.setPenaltyLogByPenaltyAndAction(penalty, 'remove');
 
-        return { ok: true, reason: '', data: penalty };
+        return { ok: true, value: penalty };
     }
 
     static async removePenaltyById(
         penaltyId: PenaltyId,
         comment: string,
         penalizer: User,
-    ): Promise<WikiResponse> {
+    ): Promise<WikiResponse<void>> {
         const penalty = await this.#removePenalty(penaltyId, comment, penalizer);
         if (!penalty.ok) return penalty;
 
-        if (penalty.data?.type === 'block') {
+        if (penalty.value?.type === 'block') {
             const penaltyArr = await PenaltyController.getPenaltiesByEmailAndType(
-                penalty.data.penalizedEmail,
+                penalty.value.penalizedEmail,
                 'block',
             );
             if (penaltyArr.length === 0)
                 await UserManager.changeGroupByEmail(
-                    penalty.data.penalizedEmail,
+                    penalty.value.penalizedEmail,
                     'user',
                     penalizer,
                 );
         }
 
-        return { ok: true, reason: '' };
+        return { ok: true };
     }
 
     static async refreshPenaltiesByName(
         penalizedName: UserName,
-    ): Promise<WikiResponseWithData<PenaltyDoc[]>> {
+    ): Promise<WikiResponse<PenaltyDoc[]>> {
         const user = await UserController.getUserByName(penalizedName);
-        if (!user) return { ok: false, reason: '사용자가 존재하지 않습니다.', data: [] };
+        if (!user) return { ok: false, reason: '사용자가 존재하지 않습니다.' };
 
         const penaltyArr = await PenaltyController.getAllPenaltiesByEmail(user.email);
         const validPenaltyArr: PenaltyDoc[] = [];
@@ -140,6 +139,6 @@ export default class PenaltyManager {
                 );
         }
 
-        return { ok: true, reason: '', data: validPenaltyArr };
+        return { ok: true, value: validPenaltyArr };
     }
 }

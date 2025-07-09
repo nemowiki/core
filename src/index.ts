@@ -4,7 +4,7 @@ import type { User, UserEmail, UserName } from './types/user';
 import type { DocAction, DocLog, DocLogDoc } from './types/log';
 import type { Group } from './types/authority';
 import type { PenaltyDoc, PenaltyId } from './types/penalty';
-import type { WikiResponse, WikiResponseWithData } from './types/general';
+import type { WikiResponse } from './types/general';
 
 import type { Change } from 'diff';
 import type { SearchResult } from 'hangul-searcher';
@@ -46,10 +46,14 @@ export async function activateWiki(
             await MetaController.initMeta();
 
             const systemUser = AuthorityManager.getSystemUser();
-            const systemUserDoc = await UserManager.signupUserByEmailAndName(
+            const res = await UserManager.signupUserByEmailAndName(
                 systemUser.email,
                 systemUser.name,
             );
+
+            if (!res.ok) throw new Error(res.reason);
+
+            const systemUserDoc = res.value;
             systemUserDoc.group = 'system';
             await systemUserDoc.save();
 
@@ -64,7 +68,7 @@ export async function backupWiki(): Promise<boolean> {
     return true;
 }
 
-// ================ User Module  ================
+// ================ User Utils ================
 
 export async function getUserByEmail(email: string): Promise<User | null> {
     return await UserController.getUserByEmail(email as UserEmail);
@@ -74,13 +78,18 @@ export async function getUserByName(name: string): Promise<User | null> {
     return await UserController.getUserByName(name as UserName);
 }
 
-export async function signinUserByEmail(email: string): Promise<User | null> {
+// ================ User Modules ================
+
+export async function signinUserByEmail(email: string): Promise<WikiResponse<User | null>> {
     return await mongoose.connection.transaction(async () => {
         return await UserManager.signinUserByEmail(email as UserEmail);
     });
 }
 
-export async function signupUserByEmailAndName(email: string, name: string): Promise<User> {
+export async function signupUserByEmailAndName(
+    email: string,
+    name: string,
+): Promise<WikiResponse<User>> {
     return await mongoose.connection.transaction(async () => {
         return await UserManager.signupUserByEmailAndName(email as UserEmail, name as UserName);
     });
@@ -90,10 +99,9 @@ export async function changeUserNameByName(
     userName: string,
     name: string,
     operator: User,
-): Promise<boolean> {
+): Promise<WikiResponse<void>> {
     return await mongoose.connection.transaction(async () => {
-        await UserManager.changeNameByName(userName as UserName, name as UserName, operator);
-        return true;
+        return await UserManager.changeNameByName(userName as UserName, name as UserName, operator);
     });
 }
 
@@ -101,23 +109,21 @@ export async function changeUserGroupByName(
     userName: string,
     group: Group,
     operator: User,
-): Promise<boolean> {
+): Promise<WikiResponse<void>> {
     return await mongoose.connection.transaction(async () => {
-        await UserManager.changeGroupByName(userName as UserName, group, operator);
-        return true;
+        return await UserManager.changeGroupByName(userName as UserName, group, operator);
     });
 }
 
-export async function removeUserByEmail(email: string): Promise<boolean> {
+export async function removeUserByEmail(email: string): Promise<WikiResponse<void>> {
     return await mongoose.connection.transaction(async () => {
-        await UserManager.removeUserByEmail(email as UserEmail);
-        return true;
+        return await UserManager.removeUserByEmail(email as UserEmail);
     });
 }
 
 export async function refreshAndGetPenaltiesByName(
     penalizedName: string,
-): Promise<WikiResponseWithData<PenaltyDoc[]>> {
+): Promise<WikiResponse<PenaltyDoc[]>> {
     return await mongoose.connection.transaction(async () => {
         return await PenaltyManager.refreshPenaltiesByName(penalizedName as UserName);
     });
@@ -128,7 +134,7 @@ export async function warnUserByName(
     penalizer: User,
     duration: number,
     comment = '',
-): Promise<WikiResponse> {
+): Promise<WikiResponse<void>> {
     comment = GeneralUtils.ignoreHtml(comment);
     return await mongoose.connection.transaction(async () => {
         return await PenaltyManager.warnUserByName(
@@ -145,7 +151,7 @@ export async function blockUserByName(
     penalizer: User,
     duration: number,
     comment = '',
-): Promise<WikiResponse> {
+): Promise<WikiResponse<void>> {
     comment = GeneralUtils.ignoreHtml(comment);
     return await mongoose.connection.transaction(async () => {
         return await PenaltyManager.blockUserByName(
@@ -161,14 +167,14 @@ export async function removePenaltyById(
     penaltyId: PenaltyId,
     comment: string,
     penalizer: User,
-): Promise<WikiResponse> {
+): Promise<WikiResponse<void>> {
     comment = GeneralUtils.ignoreHtml(comment);
     return await mongoose.connection.transaction(async () => {
         return await PenaltyManager.removePenaltyById(penaltyId, comment, penalizer);
     });
 }
 
-// ================ Doc Module ================
+// ================ Doc Utils ================
 export function getEmptyDocByFullTitle(fullTitle: string): Doc {
     return DocManager.getEmptyDocByFullTitle(fullTitle);
 }
@@ -181,11 +187,12 @@ export async function getDocByFullTitle(fullTitle: string, revision = -1): Promi
     return await DocManager.getDocByFullTitle(fullTitle, revision);
 }
 
+// ================ Doc Modules ================
 export async function readDocByFullTitle(
     fullTitle: string,
     user: User,
     revision = -1,
-): Promise<WikiResponseWithData<Doc | null>> {
+): Promise<WikiResponse<Doc>> {
     return await WikiManager.readDocByFullTitle(fullTitle, user, revision);
 }
 
@@ -194,7 +201,7 @@ export async function createDocByFullTitle(
     user: User,
     markup: string,
     comment?: string,
-): Promise<WikiResponse> {
+): Promise<WikiResponse<void>> {
     comment = GeneralUtils.ignoreHtml(comment || '');
     return await mongoose.connection.transaction(async () => {
         return await WikiManager.createDocByFullTitle(fullTitle, markup, user, comment);
@@ -206,7 +213,7 @@ export async function editDocByFullTitle(
     user: User,
     markup: string,
     comment?: string,
-): Promise<WikiResponse> {
+): Promise<WikiResponse<void>> {
     comment = GeneralUtils.ignoreHtml(comment || '');
     return await mongoose.connection.transaction(async () => {
         return await WikiManager.editDocByFullTitle(fullTitle, markup, user, comment);
@@ -217,7 +224,7 @@ export async function deleteDocByFullTitle(
     fullTitle: string,
     user: User,
     comment?: string,
-): Promise<WikiResponse> {
+): Promise<WikiResponse<void>> {
     comment = GeneralUtils.ignoreHtml(comment || '');
     return await mongoose.connection.transaction(async () => {
         return await WikiManager.deleteDocByFullTitle(fullTitle, user, comment);
@@ -229,7 +236,7 @@ export async function moveDocByFullTitle(
     user: User,
     newFullTitle: string,
     comment?: string,
-): Promise<WikiResponse> {
+): Promise<WikiResponse<void>> {
     comment = GeneralUtils.ignoreHtml(comment || '');
     return await mongoose.connection.transaction(async () => {
         return await WikiManager.moveDocByFullTitle(fullTitle, user, newFullTitle, comment);
@@ -242,7 +249,7 @@ export async function changeAuthorityByFullTitle(
     groupArr: Group[],
     user: User,
     comment?: string,
-): Promise<WikiResponse> {
+): Promise<WikiResponse<void>> {
     comment = GeneralUtils.ignoreHtml(comment || '');
     return await mongoose.connection.transaction(async () => {
         return await WikiManager.changeAuthorityByFullTitle(
@@ -259,7 +266,7 @@ export async function hideDocByFullTitle(
     fullTitle: string,
     user: User,
     comment?: string,
-): Promise<WikiResponse> {
+): Promise<WikiResponse<void>> {
     comment = GeneralUtils.ignoreHtml(comment || '');
     return await mongoose.connection.transaction(async () => {
         return await WikiManager.hideDocByFullTitle(fullTitle, user, comment);
@@ -270,7 +277,7 @@ export async function showDocByFullTitle(
     fullTitle: string,
     user: User,
     comment?: string,
-): Promise<WikiResponse> {
+): Promise<WikiResponse<void>> {
     comment = GeneralUtils.ignoreHtml(comment || '');
     return await mongoose.connection.transaction(async () => {
         return await WikiManager.showDocByFullTitle(fullTitle, user, comment);
@@ -280,29 +287,41 @@ export async function showDocByFullTitle(
 export async function compareDocByDoc(
     oldDoc: Doc | null,
     newDoc: Doc | null,
-): Promise<{ diff: Change[]; oldDoc: Doc | null; newDoc: Doc | null }> {
-    return await WikiManager.compareDocByDocs(oldDoc, newDoc);
+): Promise<WikiResponse<Change[]>> {
+    return {
+        ok: true,
+        value: await WikiManager.compareDocByDocs(oldDoc, newDoc),
+    };
 }
-
-// ================ Other Doc Modules ================
 
 export async function searchDoc(
     searchWord: string,
-): Promise<{ status: 'exact' | 'searched'; result: Array<string | SearchResult> }> {
-    return await WikiManager.searchDoc(searchWord);
+): Promise<WikiResponse<{ status: 'exact' | 'searched'; result: Array<string | SearchResult> }>> {
+    return {
+        ok: true,
+        value: await WikiManager.searchDoc(searchWord),
+    };
 }
 
-export async function previewDoc(doc: Doc): Promise<string> {
-    return await WikiManager.createHTMLByDoc(doc);
+export async function previewDoc(doc: Doc): Promise<WikiResponse<string>> {
+    return {
+        ok: true,
+        value: await WikiManager.createHTMLByDoc(doc),
+    };
 }
 
-// ================ History Module ================
+// ================ Log Utils ================
+export async function getRecentWriteLogs(count: number = 10): Promise<Array<DocLog>> {
+    return await LogController.getRecentWriteLogs(count);
+}
+
+// ================ Log Modules ================
 export async function getDocLogsByFullTitle(
     fullTitle: string,
     user: User,
     page: number,
     cnt = 10,
-): Promise<WikiResponseWithData<DocLogDoc[] | null>> {
+): Promise<WikiResponse<DocLogDoc[]>> {
     return await LogManager.getDocLogsByFullTitle(fullTitle, user, page, cnt);
 }
 
@@ -310,13 +329,8 @@ export async function getDocLogsByUserName(
     userName: string,
     page: number,
     cnt = 10,
-): Promise<WikiResponseWithData<DocLogDoc[] | null>> {
+): Promise<WikiResponse<DocLogDoc[]>> {
     return await LogManager.getDocLogsByUserName(userName as UserName, page, cnt);
-}
-
-// ================ Log Module ================
-export async function getRecentWriteLogs(count: number = 10): Promise<Array<DocLog>> {
-    return await LogController.getRecentWriteLogs(count);
 }
 
 // ================ File Module ================
@@ -326,7 +340,7 @@ export async function uploadFileByFullTitle(
     file: File,
     user: User,
     comment?: string,
-): Promise<WikiResponse> {
+): Promise<WikiResponse<void>> {
     comment = GeneralUtils.ignoreHtml(comment || '');
     return await mongoose.connection.transaction(async () => {
         return await WikiManager.uploadFileByFullTitle(fullTitle, markup, file, user, comment);
@@ -334,6 +348,7 @@ export async function uploadFileByFullTitle(
 }
 
 // ================ Other Utils ================
+
 export async function getAllFullTitles(): Promise<string[]> {
     return await MappingController.getAllFullTitles();
 }

@@ -2,7 +2,7 @@ import type { Doc } from '../types/doc';
 import type { Group } from '../types/authority';
 import type { User } from '../types/user';
 import type { DocAction } from '../types/log';
-import { WikiResponse, WikiResponseWithData } from '../types/general';
+import type { WikiResponse } from '../types/general';
 
 import mongoose from 'mongoose';
 import HangulSearcher, { type SearchResult } from 'hangul-searcher';
@@ -119,21 +119,19 @@ export default class WikiManager {
         fullTitle: string,
         user: User,
         revision = -1,
-    ): Promise<WikiResponseWithData<Doc | null>> {
+    ): Promise<WikiResponse<Doc>> {
         const doc = await DocManager.getDocByFullTitle(fullTitle, revision);
-        if (!doc)
+        if (!doc || doc.state === 'deleted')
             return {
                 ok: false,
                 reason: '문서가 존재하지 않습니다.',
-                data: DocManager.getEmptyDocByFullTitle(fullTitle),
             };
-        if (doc.state === 'deleted') return { ok: false, reason: '삭제된 문서입니다.', data: doc };
         else {
             const result = AuthorityManager.canRead(doc, user.group);
-            if (!result.ok) return { ok: false, reason: result.reason, data: null };
+            if (!result.ok) return { ok: false, reason: result.reason };
 
             doc.html = await this.createHTMLByDoc(doc);
-            return { ok: true, reason: '', data: doc };
+            return { ok: true, value: doc };
         }
     }
 
@@ -151,7 +149,7 @@ export default class WikiManager {
         user: User,
         comment?: string,
         file?: File,
-    ): Promise<WikiResponse> {
+    ): Promise<WikiResponse<void>> {
         const oldInfo = await InfoController.getInfoByFullTitle(fullTitle);
 
         const result = AuthorityManager.canCreate(oldInfo, fullTitle, user.group, file);
@@ -177,7 +175,7 @@ export default class WikiManager {
 
         await DocManager.createDocIgnoringCategory(newDoc, user, comment);
 
-        return { ok: true, reason: '' };
+        return { ok: true };
     }
 
     static async editDocByFullTitle(
@@ -185,7 +183,7 @@ export default class WikiManager {
         markup: string,
         user: User,
         comment?: string,
-    ): Promise<WikiResponse> {
+    ): Promise<WikiResponse<void>> {
         const prevDoc = await DocManager.getDocByFullTitle(fullTitle);
         if (!prevDoc) return { ok: false, reason: '문서가 존재하지 않습니다.' };
 
@@ -200,14 +198,14 @@ export default class WikiManager {
         await LogManager.setDocLogByActionAndDoc('edit', prevDoc, nextDoc, user, comment);
         await DocManager.saveDocByDoc(prevDoc, nextDoc);
 
-        return { ok: true, reason: '' };
+        return { ok: true };
     }
 
     static async deleteDocByFullTitle(
         fullTitle: string,
         user: User,
         comment?: string,
-    ): Promise<WikiResponse> {
+    ): Promise<WikiResponse<void>> {
         const prevDoc = await DocManager.getDocByFullTitle(fullTitle);
         if (!prevDoc) return { ok: false, reason: '문서가 존재하지 않습니다.' };
 
@@ -222,7 +220,7 @@ export default class WikiManager {
 
         await DocManager.deleteDocIgnoringCategory(prevDoc, user, comment);
 
-        return { ok: true, reason: '' };
+        return { ok: true };
     }
 
     static async moveDocByFullTitle(
@@ -230,7 +228,7 @@ export default class WikiManager {
         user: User,
         nextFullTitle: string,
         comment?: string,
-    ): Promise<WikiResponse> {
+    ): Promise<WikiResponse<void>> {
         const prevInfo = await InfoController.getInfoByFullTitle(prevFullTitle);
         if (!prevInfo) return { ok: false, reason: '문서가 존재하지 않습니다.' };
 
@@ -247,7 +245,7 @@ export default class WikiManager {
         await LogController.updateFullTitlesOfAllDocLogsByDocId(nextInfo.docId, nextInfo.fullTitle);
         await InfoController.updateInfoByDoc(nextInfo);
 
-        return { ok: true, reason: '' };
+        return { ok: true };
     }
 
     static async changeAuthorityByFullTitle(
@@ -256,7 +254,7 @@ export default class WikiManager {
         groupArr: Group[],
         user: User,
         comment?: string,
-    ): Promise<WikiResponse> {
+    ): Promise<WikiResponse<void>> {
         const prevInfo = await InfoController.getInfoByFullTitle(fullTitle);
         if (!prevInfo) return { ok: false, reason: '문서가 존재하지 않습니다.' };
 
@@ -275,14 +273,14 @@ export default class WikiManager {
         );
         await InfoController.updateInfoByDoc(nextInfo);
 
-        return { ok: true, reason: '' };
+        return { ok: true };
     }
 
     static async hideDocByFullTitle(
         fullTitle: string,
         user: User,
         comment?: string,
-    ): Promise<WikiResponse> {
+    ): Promise<WikiResponse<void>> {
         const prevInfo = await InfoController.getInfoByFullTitle(fullTitle);
         if (!prevInfo) return { ok: false, reason: '문서가 존재하지 않습니다.' };
 
@@ -301,14 +299,14 @@ export default class WikiManager {
         );
         await InfoController.updateInfoByDoc(nextInfo);
 
-        return { ok: true, reason: '' };
+        return { ok: true };
     }
 
     static async showDocByFullTitle(
         fullTitle: string,
         user: User,
         comment?: string,
-    ): Promise<WikiResponse> {
+    ): Promise<WikiResponse<void>> {
         const prevInfo = await InfoController.getInfoByFullTitle(fullTitle);
         if (!prevInfo) return { ok: false, reason: '문서가 존재하지 않습니다.' };
 
@@ -327,7 +325,7 @@ export default class WikiManager {
         );
         await InfoController.updateInfoByDoc(nextInfo);
 
-        return { ok: true, reason: '' };
+        return { ok: true };
     }
 
     static async uploadFileByFullTitle(
@@ -336,22 +334,15 @@ export default class WikiManager {
         file: File,
         user: User,
         comment?: string,
-    ): Promise<WikiResponse> {
+    ): Promise<WikiResponse<void>> {
         const result = AuthorityManager.canUploadFile(fullTitle, file);
         if (!result.ok) return result;
 
         return await this.createDocByFullTitle(fullTitle, markup, user, comment, file);
     }
 
-    static async compareDocByDocs(
-        oldDoc: Doc | null,
-        newDoc: Doc | null,
-    ): Promise<{ diff: Change[]; oldDoc: Doc | null; newDoc: Doc | null }> {
-        return {
-            diff: diffWords(oldDoc?.markup || '', newDoc?.markup || ''),
-            oldDoc,
-            newDoc,
-        };
+    static async compareDocByDocs(oldDoc: Doc | null, newDoc: Doc | null): Promise<Change[]> {
+        return diffWords(oldDoc?.markup || '', newDoc?.markup || '');
     }
 
     static async searchDoc(

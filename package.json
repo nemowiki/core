@@ -1,7 +1,7 @@
 {
     "name": "@nemowiki/core",
     "version": "0.1.0",
-    "description": "A core engine for NemoWiki",
+    "description": "A core engine of NemoWiki",
     "license": "Apache-2.0",
     "type": "module",
     "main": "./dist/index.js",
@@ -23,7 +23,9 @@
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
         "format": "prettier --write .",
-        "build": "tsc"
+        "build": "tsc",
+        "lint": "eslint .",
+        "lint:fix": "eslint . --fix"
     },
     "repository": {
         "type": "git",
@@ -50,6 +52,11 @@
     "devDependencies": {
         "@types/diff": "^7.0.1",
         "@types/node": "^22.13.10",
+        "@typescript-eslint/eslint-plugin": "^8.36.0",
+        "@typescript-eslint/parser": "^8.36.0",
+        "eslint": "^9.30.1",
+        "eslint-config-prettier": "^10.1.5",
+        "globals": "^16.3.0",
         "prettier": "^3.6.2"
     }
 }

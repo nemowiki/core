@@ -1,4 +1,4 @@
-import type { CategoryInfo, Info } from '../types/info';
+import type { CategoryInfo, Info, InfoDoc } from '../types/info';
 import type { DocId } from '../types/doc';
 
 import InfoController from '../controllers/info.js';
@@ -105,7 +105,7 @@ export default class CategoryManager {
             const addCategoryInfoArr =
                 await InfoController.getInfosByFullTitleArr(addCategoryFullTitleArr);
 
-            const addPromiseArr: Promise<any>[] = [];
+            const addPromiseArr: Promise<InfoDoc|void>[] = [];
             const newCategoryIdArr: DocId[] = [];
 
             for (let idx = 0; idx < addCategoryInfoArr.length; idx++) {
@@ -173,8 +173,8 @@ export default class CategoryManager {
                 removeCategoryFullTitleArr,
             );
 
-            const removePromiseArr: Promise<any>[] = [];
-            for (let [key, value] of removeInfoMap) {
+            const removePromiseArr: Promise<InfoDoc>[] = [];
+            for (let [key, _value] of removeInfoMap) {
                 const removeInfo = removeInfoMap.get(key);
                 removePromiseArr.push(InfoController.updateInfoByDoc(removeInfo as Info));
             }

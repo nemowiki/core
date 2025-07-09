@@ -12,7 +12,7 @@ import type {
 import type { Penalty } from '../types/penalty';
 import type { User, UserEmail, UserName } from '../types/user';
 import type { Info } from '../types/info';
-import { WikiResponseWithData } from '../types/general';
+import { WikiResponse } from '../types/general';
 
 import UserController from '../controllers/user.js';
 import MetaController from '../controllers/meta.js';
@@ -149,39 +149,39 @@ export default class LogManager {
         user: User,
         page: number,
         cnt = 10,
-    ): Promise<WikiResponseWithData<DocLogDoc[] | null>> {
-        if (cnt <= 0) return { ok: false, reason: '개수가 0이상이어야 합니다.', data: null };
+    ): Promise<WikiResponse<DocLogDoc[]>> {
+        if (cnt <= 0) return { ok: false, reason: '개수가 0이상이어야 합니다.' };
 
         const docInfo = await InfoController.getInfoByFullTitle(fullTitle);
-        if (!docInfo) return { ok: false, reason: '문서가 존재하지 않습니다.', data: null };
+        if (!docInfo) return { ok: false, reason: '문서가 존재하지 않습니다.' };
 
-        const { ok, reason } = AuthorityManager.canRead(docInfo, user.group);
+        const res_read = AuthorityManager.canRead(docInfo, user.group);
 
-        if (!ok) return { ok, reason, data: null };
+        if (!res_read.ok) return res_read;
 
         const skip = (page - 1) * cnt;
         const limit = cnt;
 
-        const data = await LogController.getDocLogsByDocId(docInfo.docId, limit, skip);
+        const value = await LogController.getDocLogsByDocId(docInfo.docId, limit, skip);
 
-        return { ok: true, reason: '', data };
+        return { ok: true, value };
     }
 
     static async getDocLogsByUserName(
         userName: UserName,
         page: number,
         cnt = 10,
-    ): Promise<WikiResponseWithData<DocLogDoc[] | null>> {
-        if (cnt <= 0) return { ok: false, reason: '개수가 0이상이어야 합니다.', data: null };
+    ): Promise<WikiResponse<DocLogDoc[]>> {
+        if (cnt <= 0) return { ok: false, reason: '개수가 0이상이어야 합니다.' };
 
         const user = await UserController.getUserByName(userName);
-        if (!user) return { ok: false, reason: '존재하지 않는 사용자입니다.', data: null };
+        if (!user) return { ok: false, reason: '존재하지 않는 사용자입니다.' };
 
         const skip = (page - 1) * cnt;
         const limit = cnt;
 
-        const data = await LogController.getDocLogsByUserName(userName, limit, skip);
+        const value = await LogController.getDocLogsByUserName(userName, limit, skip);
 
-        return { ok: true, reason: '', data };
+        return { ok: true, value };
     }
 }

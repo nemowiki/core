@@ -13,9 +13,6 @@ export default class UserController {
     }
 
     static async updateNameByUserName(prevName: UserName, newName: UserName): Promise<void> {
-        if ((await this.getUserByName(newName)) !== null) {
-            throw new Error('Duplicate UserName');
-        }
         await UserModel.findOneAndUpdate({ name: prevName }, { name: newName });
     }
 
@@ -28,10 +25,6 @@ export default class UserController {
     }
 
     static async setUserByEmailAndName(email: UserEmail, name: UserName): Promise<UserDoc> {
-        if ((await this.getUserByName(name)) !== null) {
-            throw new Error('Duplicate UserName');
-        }
-
         const user = new UserModel<User>({
             email,
             name,

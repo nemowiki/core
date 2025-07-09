@@ -7,20 +7,24 @@ import MetaController from '../controllers/meta.js';
 
 import AuthorityManager from './authority.js';
 import LogManager from './log.js';
+import { WikiResponse } from '../types';
 
 export default class UserManager {
-    static async signinUserByEmail(email: UserEmail): Promise<User | null> {
+    static async signinUserByEmail(email: UserEmail): Promise<WikiResponse<User | null>> {
         // TODO: Will this function be used?
         const user = await UserController.getUserByEmail(email);
-        if (!user) return null;
+        if (!user) return { ok: false, reason: '사용자가 존재하지 않습니다.' };
 
         // await LogController.setUserLogByEmailAndAction(email, 'signin', `name: ${user.name}`);
-        return user;
+        return { ok: true, value: user };
     }
 
-    static async signupUserByEmailAndName(email: UserEmail, name: UserName): Promise<UserDoc> {
+    static async signupUserByEmailAndName(
+        email: UserEmail,
+        name: UserName,
+    ): Promise<WikiResponse<UserDoc>> {
         let user = await UserController.getUserByEmail(email);
-        if (user) throw new Error('This user is already signed up!');
+        if (user) return { ok: false, reason: '이미 가입된 사용자입니다.' };
 
         user = await UserController.getUserByName(name);
         while (user) {
@@ -30,19 +34,21 @@ export default class UserManager {
 
         await LogManager.setUserLogByEmailAndAction(email, 'signup', `name: ${name}`);
         await MetaController.addUserCnt(1);
-        return await UserController.setUserByEmailAndName(email, name);
+        const userDoc = await UserController.setUserByEmailAndName(email, name);
+        return { ok: true, value: userDoc };
     }
 
     static async changeNameByName(
         userName: UserName,
         newName: UserName,
         operator: User,
-    ): Promise<void> {
+    ): Promise<WikiResponse<void>> {
         const user = await UserController.getUserByName(userName);
-        if (!user) throw new Error('The user does not exist!');
+        if (!user) return { ok: false, reason: '사용자가 존재하지 않습니다.' };
         const prevName = user.name;
 
-        if (!AuthorityManager.canChangeName(user, operator)) throw new Error('Cannot change name!');
+        if (!AuthorityManager.canChangeName(user, operator))
+            return { ok: false, reason: '이름 변경 권한이 없습니다.' };
 
         const changeNameLog = await LogController.getMostRecentChangeNameLogByEmail(user.email);
 
@@ -50,7 +56,7 @@ export default class UserManager {
             changeNameLog &&
             new Date(changeNameLog.time).getTime() < new Date().getTime() + 30 * 24 * 60 * 60 * 1000
         )
-            throw new Error('You can change your name only once every 30 days.');
+            return { ok: false, reason: '마지막 이름 변경이 30일 이내입니다.' };
 
         await UserController.updateNameByUserName(prevName, newName);
         await LogController.updateNamesOfAllDocLogsByEmail(user.email, newName);
@@ -59,17 +65,18 @@ export default class UserManager {
             'change_name',
             `${prevName}→${newName} by ${operator.email}`,
         );
+        return { ok: true };
     }
 
     static async #changeGroupByUser(
         user: UserDoc | null,
         group: Group,
         operator: User,
-    ): Promise<void> {
-        if (!user) throw new Error('The user does not exist!');
+    ): Promise<WikiResponse<void>> {
+        if (!user) return { ok: false, reason: '사용자가 존재하지 않습니다.' };
 
         if (!AuthorityManager.canChangeGroup(user, operator))
-            throw new Error('Cannot change group!');
+            return { ok: false, reason: '그룹 변경 권한이 없습니다.' };
 
         await LogManager.setUserLogByEmailAndAction(
             user.email,
@@ -77,35 +84,39 @@ export default class UserManager {
             `${user.group}→${group} by ${operator.email}`,
         );
         await UserController.updateGroupByUserName(user.name, group);
+        return { ok: true };
     }
 
     static async changeGroupByName(
         userName: UserName,
         group: Group,
         operator: User,
-    ): Promise<void> {
+    ): Promise<WikiResponse<void>> {
         if (!['user', 'manager'].includes(group))
-            throw new Error("The group of user can only be 'user' or 'manager'!");
+            return { ok: false, reason: "The group of user can only be 'user' or 'manager'!" };
         const user = await UserController.getUserByName(userName);
-        await this.#changeGroupByUser(user, group, operator);
+        const res = await this.#changeGroupByUser(user, group, operator);
+        return res;
     }
 
     static async changeGroupByEmail(
         userEmail: UserEmail,
         group: Group,
         operator: User,
-    ): Promise<void> {
+    ): Promise<WikiResponse<void>> {
         if (!['user', 'blocked'].includes(group))
-            throw new Error('This function is made for blocking and unblocking user!');
+            return { ok: false, reason: 'This function is made for blocking and unblocking user!' };
         const user = await UserController.getUserByEmail(userEmail);
-        await this.#changeGroupByUser(user, group, operator);
+        const res = await this.#changeGroupByUser(user, group, operator);
+        return res;
     }
 
-    static async removeUserByEmail(email: UserEmail): Promise<void> {
+    static async removeUserByEmail(email: UserEmail): Promise<WikiResponse<void>> {
         const user = await UserController.getUserByEmail(email);
-        if (!user) throw new Error('The user does not exist!');
+        if (!user) return { ok: false, reason: '사용자가 존재하지 않습니다.' };
 
         await LogController.updateNamesOfAllDocLogsByEmail(email, '(삭제된 사용자)' as UserName);
         await UserController.deleteUserByUserEmail(email);
+        return { ok: true };
     }
 }

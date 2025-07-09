@@ -21,7 +21,7 @@ export default class MarkupUtils {
             GeneralUtils.addItemToArrInMap(choseongMap, choseong, title);
         });
 
-        for (let [choseong, value] of choseongMap) {
+        for (let [choseong, _value] of choseongMap) {
             (choseongMap.get(choseong) || []).sort();
         }
 
