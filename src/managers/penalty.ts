@@ -18,17 +18,16 @@ export default class PenaltyManager {
         penalizer: User,
     ): Promise<WikiResponse<void>> {
         const penalizedUser = await UserController.getUserByName(penalizedName);
-        if (!penalizedUser) return { ok: false, reason: '사용자가 존재하지 않습니다.' };
 
         const res_penalty = AuthorityManager.canApplyPenalty(
-            penalizedUser.group,
+            penalizedUser,
             duration,
             penalizer.group,
         );
         if (!res_penalty.ok) return res_penalty;
 
         const penalty = {
-            penalizedEmail: penalizedUser.email,
+            penalizedEmail: penalizedUser!.email,
             penalizerEmail: penalizer.email,
             type: penaltyType,
             until: new Date(new Date().getTime() + duration * 60 * 1000),
@@ -40,7 +39,7 @@ export default class PenaltyManager {
         await LogManager.setPenaltyLogByPenaltyAndAction(penalty, 'apply');
 
         if (penaltyType === 'block')
-            await UserManager.changeGroupByEmail(penalizedUser.email, 'blocked', penalizer);
+            await UserManager.changeGroupByEmail(penalizedUser!.email, 'blocked', penalizer);
 
         return { ok: true };
     }

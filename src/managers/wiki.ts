@@ -124,7 +124,7 @@ export default class WikiManager {
         if (!doc || (doc.state === 'deleted' && revision === -1))
             return {
                 ok: false,
-                reason: '문서가 존재하지 않습니다.',
+                reason: '존재하지 않는 문서입니다.',
             };
         else {
             const result = AuthorityManager.canRead(doc, user.group);
@@ -185,7 +185,7 @@ export default class WikiManager {
         comment?: string,
     ): Promise<WikiResponse<void>> {
         const prevDoc = await DocManager.getDocByFullTitle(fullTitle);
-        if (!prevDoc) return { ok: false, reason: '문서가 존재하지 않습니다.' };
+        if (!prevDoc) return { ok: false, reason: '존재하지 않는 문서입니다.' };
 
         const result = AuthorityManager.canEdit(prevDoc, user.group);
         if (!result.ok) return result;
@@ -207,7 +207,7 @@ export default class WikiManager {
         comment?: string,
     ): Promise<WikiResponse<void>> {
         const prevDoc = await DocManager.getDocByFullTitle(fullTitle);
-        if (!prevDoc) return { ok: false, reason: '문서가 존재하지 않습니다.' };
+        if (!prevDoc) return { ok: false, reason: '존재하지 않는 문서입니다.' };
 
         const result = AuthorityManager.canDelete(prevDoc, user.group);
         if (!result.ok) return result;
@@ -230,7 +230,7 @@ export default class WikiManager {
         comment?: string,
     ): Promise<WikiResponse<void>> {
         const prevInfo = await InfoController.getInfoByFullTitle(prevFullTitle);
-        if (!prevInfo) return { ok: false, reason: '문서가 존재하지 않습니다.' };
+        if (!prevInfo) return { ok: false, reason: '존재하지 않는 문서입니다.' };
 
         const _nextInfo = await InfoController.getInfoByFullTitle(nextFullTitle);
         if (_nextInfo) return { ok: false, reason: `문서 "${nextFullTitle}"가 이미 존재합니다.` };
@@ -256,7 +256,7 @@ export default class WikiManager {
         comment?: string,
     ): Promise<WikiResponse<void>> {
         const prevInfo = await InfoController.getInfoByFullTitle(fullTitle);
-        if (!prevInfo) return { ok: false, reason: '문서가 존재하지 않습니다.' };
+        if (!prevInfo) return { ok: false, reason: '존재하지 않는 문서입니다.' };
 
         const result = AuthorityManager.canChangeAuthority(prevInfo, groupArr, user.group);
         if (!result.ok) return result;
@@ -282,7 +282,7 @@ export default class WikiManager {
         comment?: string,
     ): Promise<WikiResponse<void>> {
         const prevInfo = await InfoController.getInfoByFullTitle(fullTitle);
-        if (!prevInfo) return { ok: false, reason: '문서가 존재하지 않습니다.' };
+        if (!prevInfo) return { ok: false, reason: '존재하지 않는 문서입니다.' };
 
         const result = AuthorityManager.canHide(prevInfo, user.group);
         if (!result.ok) return result;
@@ -308,7 +308,7 @@ export default class WikiManager {
         comment?: string,
     ): Promise<WikiResponse<void>> {
         const prevInfo = await InfoController.getInfoByFullTitle(fullTitle);
-        if (!prevInfo) return { ok: false, reason: '문서가 존재하지 않습니다.' };
+        if (!prevInfo) return { ok: false, reason: '존재하지 않는 문서입니다.' };
 
         const result = AuthorityManager.canShow(prevInfo, user.group);
         if (!result.ok) return result;

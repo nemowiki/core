@@ -1,5 +1,6 @@
 import type { Group } from '../types/authority';
 import type { User, UserDoc, UserEmail, UserName } from '../types/user';
+import type { WikiResponse } from '../types/general';
 
 import UserController from '../controllers/user.js';
 import LogController from '../controllers/log.js';
@@ -7,13 +8,12 @@ import MetaController from '../controllers/meta.js';
 
 import AuthorityManager from './authority.js';
 import LogManager from './log.js';
-import { WikiResponse } from '../types';
 
 export default class UserManager {
     static async signinUserByEmail(email: UserEmail): Promise<WikiResponse<User | null>> {
         // TODO: Will this function be used?
         const user = await UserController.getUserByEmail(email);
-        if (!user) return { ok: false, reason: '사용자가 존재하지 않습니다.' };
+        if (!user) return { ok: false, reason: '존재하지 않는 사용자입니다.' };
 
         // await LogController.setUserLogByEmailAndAction(email, 'signin', `name: ${user.name}`);
         return { ok: true, value: user };
@@ -44,11 +44,12 @@ export default class UserManager {
         operator: User,
     ): Promise<WikiResponse<void>> {
         const user = await UserController.getUserByName(userName);
-        if (!user) return { ok: false, reason: '사용자가 존재하지 않습니다.' };
-        const prevName = user.name;
+        if (!user) return { ok: false, reason: '존재하지 않는 사용자입니다.' };
 
-        if (!AuthorityManager.canChangeName(user, operator))
-            return { ok: false, reason: '이름 변경 권한이 없습니다.' };
+        const res = AuthorityManager.canChangeName(user, operator.email, operator.group);
+        if (!res.ok) return res;
+
+        const prevName = user.name;
 
         const changeNameLog = await LogController.getMostRecentChangeNameLogByEmail(user.email);
 
@@ -73,10 +74,9 @@ export default class UserManager {
         group: Group,
         operator: User,
     ): Promise<WikiResponse<void>> {
-        if (!user) return { ok: false, reason: '사용자가 존재하지 않습니다.' };
-
-        if (!AuthorityManager.canChangeGroup(user, operator))
-            return { ok: false, reason: '그룹 변경 권한이 없습니다.' };
+        if (!user) return { ok: false, reason: '존재하지 않는 사용자 입니다.' };
+        const res = AuthorityManager.canChangeGroup(user, operator.group);
+        if (!res.ok) return res;
 
         await LogManager.setUserLogByEmailAndAction(
             user.email,
@@ -113,7 +113,7 @@ export default class UserManager {
 
     static async removeUserByEmail(email: UserEmail): Promise<WikiResponse<void>> {
         const user = await UserController.getUserByEmail(email);
-        if (!user) return { ok: false, reason: '사용자가 존재하지 않습니다.' };
+        if (!user) return { ok: false, reason: '존재하지 않는 사용자입니다.' };
 
         await LogController.updateNamesOfAllDocLogsByEmail(email, '(삭제된 사용자)' as UserName);
         await UserController.deleteUserByUserEmail(email);

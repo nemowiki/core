@@ -259,41 +259,51 @@ export default class AuthorityManager {
     }
 
     static canApplyPenalty(
-        penalizedGroup: Group,
+        penalizedUser: User | null,
         duration: number,
-        userGroup: Group,
+        penalizerGroup: Group,
     ): WikiResponse<void> {
+        if (!penalizedUser) return { ok: false, reason: '존재하지 않는 사용자입니다.' };
+
         if (duration < 0)
             return { ok: false, reason: '제재 기간은 0분 이상이어야 합니다. (0은 영구)' };
-        if (
-            ['manager', 'system', 'dev'].includes(userGroup) &&
-            !['system', 'dev'].includes(penalizedGroup)
-        )
-            return { ok: true };
-        return { ok: false, reason: '경고 및 차단 권한이 없습니다.' };
+
+        if (!['manager', 'system', 'dev'].includes(penalizerGroup))
+            return { ok: false, reason: '경고 및 차단 권한이 없습니다.' };
+
+        if (['system', 'dev'].includes(penalizedUser.group))
+            return { ok: false, reason: '시스템 및 개발자 그룹은 제재할 수 없습니다.' };
+
+        return { ok: true };
     }
 
-    static canRemovePenalty(userGroup: Group): WikiResponse<void> {
-        if (['manager', 'system', 'dev'].includes(userGroup)) return { ok: true };
-        return { ok: false, reason: '경고 및 차단 권한이 없습니다.' };
+    static canRemovePenalty(penalizerGroup: Group): WikiResponse<void> {
+        if (!['manager', 'system', 'dev'].includes(penalizerGroup))
+            return { ok: false, reason: '경고 및 차단을 취소할 권한이 없습니다.' };
+        return { ok: true };
     }
 
-    static canChangeName(user: User, operator: User): WikiResponse<void> {
-        if (user.email === operator.email) return { ok: true };
-        if (
-            ['system', 'manager', 'dev'].includes(operator.group) &&
-            !['system', 'dev'].includes(user.group)
-        )
-            return { ok: true };
-        return { ok: false, reason: '이름 변경 권한이 없습니다.' };
+    static canChangeName(
+        targetUser: User | null,
+        operatorEmail: string,
+        operatorGroup: Group,
+    ): WikiResponse<void> {
+        if (!targetUser) return { ok: false, reason: '존재하지 않는 사용자입니다.' };
+        if (['blocked'].includes(operatorGroup))
+            return { ok: false, reason: '차단된 사용자는 이름을 변경할 수 없습니다.' };
+        if (['system'].includes(targetUser.group))
+            return { ok: false, reason: '시스템 유저의 이름은 변경이 불가능합니다.' };
+        if (targetUser.email !== operatorEmail)
+            return { ok: false, reason: '이름 변경은 본인만 가능합니다.' };
+        return { ok: true };
     }
 
-    static canChangeGroup(user: User, operator: User): WikiResponse<void> {
-        if (
-            ['system', 'manager', 'dev'].includes(operator.group) &&
-            !['system', 'dev'].includes(user.group)
-        )
-            return { ok: true };
-        return { ok: false, reason: '그룹 변경 권한이 없습니다.' };
+    static canChangeGroup(targetUser: User | null, operatorGroup: Group): WikiResponse<void> {
+        if (!targetUser) return { ok: false, reason: '존재하지 않는 사용자입니다.' };
+        if (!['system', 'manager', 'dev'].includes(operatorGroup))
+            return { ok: false, reason: '그룹 변경 권한이 없습니다.' };
+        if (['system', 'dev'].includes(targetUser.group))
+            return { ok: false, reason: '시스템 및 개발자 그룹은 그룹을 변경할 수 없습니다.' };
+        return { ok: true };
     }
 }
