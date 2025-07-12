@@ -9,16 +9,7 @@ import TitleUtils from '../utils/title.js';
 
 export default class AuthorityManager {
     static isGroup(group: string): boolean {
-        const groupArr: Group[] = [
-            'none',
-            'any',
-            'guest',
-            'user',
-            'dev',
-            'manager',
-            'system',
-            'blocked',
-        ];
+        const groupArr: Group[] = ['none', 'any', 'guest', 'user', 'dev', 'manager', 'blocked'];
         return groupArr.includes(group as Group);
     }
 
@@ -94,8 +85,9 @@ export default class AuthorityManager {
         else return false;
     }
 
-    static canRead(docInfo: Info, userGroup: Group): WikiResponse<void> {
-        if (docInfo.state === 'new') return { ok: false, reason: '존재하지 않는 문서입니다.' };
+    static canRead(docInfo: Info | null, userGroup: Group): WikiResponse<void> {
+        if (!docInfo || docInfo.state === 'new')
+            return { ok: false, reason: '존재하지 않는 문서입니다.' };
         // No deleted-state check. Because, even if the document is deleted, its authority, histories, or etc. should be readable.
 
         if (docInfo.state === 'hidden')
@@ -119,8 +111,9 @@ export default class AuthorityManager {
     //     }
     // }
 
-    static canEdit(docInfo: Info, userGroup: Group): WikiResponse<void> {
-        if (docInfo.state === 'new') return { ok: false, reason: '존재하지 않는 문서입니다.' };
+    static canEdit(docInfo: Info | null, userGroup: Group): WikiResponse<void> {
+        if (!docInfo || docInfo.state === 'new')
+            return { ok: false, reason: '존재하지 않는 문서입니다.' };
         if (docInfo.state === 'hidden')
             return { ok: false, reason: '숨겨진 문서는 편집할 수 없습니다.' };
         if (docInfo.state === 'deleted')
@@ -169,8 +162,9 @@ export default class AuthorityManager {
         return { ok: false, reason: '생성 권한이 없습니다.' };
     }
 
-    static canDelete(docInfo: Info, userGroup: Group): WikiResponse<void> {
-        if (docInfo.state === 'new') return { ok: false, reason: '존재하지 않는 문서입니다.' };
+    static canDelete(docInfo: Info | null, userGroup: Group): WikiResponse<void> {
+        if (!docInfo || docInfo.state === 'new')
+            return { ok: false, reason: '존재하지 않는 문서입니다.' };
         if (docInfo.state === 'hidden')
             return { ok: false, reason: '숨겨진 문서는 이미 삭제된 문서입니다.' };
         if (docInfo.state === 'deleted') return { ok: false, reason: '이미 삭제된 문서입니다.' };
@@ -183,7 +177,18 @@ export default class AuthorityManager {
         return { ok: false, reason: '삭제 권한이 없습니다.' };
     }
 
-    static canMove(prevInfo: Info, nextFullTitle: string, userGroup: Group): WikiResponse<void> {
+    static canMove(
+        prevInfo: Info | null,
+        nextFullTitle: string,
+        userGroup: Group,
+    ): WikiResponse<void> {
+        if (!prevInfo || prevInfo.state === 'new')
+            return { ok: false, reason: '존재하지 않는 문서입니다.' };
+        if (prevInfo.state === 'hidden')
+            return { ok: false, reason: '숨겨진 문서는 이동할 수 없습니다.' };
+        if (prevInfo.type === 'category')
+            return { ok: false, reason: '분류 문서는 이동할 수 없습니다.' };
+
         if (!AuthorityManager.isAuthorized(prevInfo.authority['move'] || [], userGroup))
             return { ok: false, reason: '이동 권한이 없습니다.' };
 
@@ -195,21 +200,16 @@ export default class AuthorityManager {
         if (newPrefix !== oldPrefix)
             return { ok: false, reason: '문서의 접두어는 변경할 수 없습니다.' };
 
-        if (prevInfo.state === 'new') return { ok: false, reason: '존재하지 않는 문서입니다.' };
-        if (prevInfo.state === 'hidden')
-            return { ok: false, reason: '숨겨진 문서는 이동할 수 없습니다.' };
-        if (prevInfo.type === 'category')
-            return { ok: false, reason: '분류 문서는 이동할 수 없습니다.' };
-
         return { ok: true };
     }
 
     static canChangeAuthority(
-        docInfo: Info,
+        docInfo: Info | null,
         groupArr: Group[],
         userGroup: Group,
     ): WikiResponse<void> {
-        if (docInfo.state === 'new') return { ok: false, reason: '존재하지 않는 문서입니다.' };
+        if (!docInfo || docInfo.state === 'new')
+            return { ok: false, reason: '존재하지 않는 문서입니다.' };
         if (docInfo.state === 'hidden')
             return { ok: false, reason: '숨겨진 문서는 권한을 변경할 수 없습니다.' };
 
@@ -224,8 +224,9 @@ export default class AuthorityManager {
         return { ok: true };
     }
 
-    static canHide(docInfo: Info, userGroup: Group): WikiResponse<void> {
-        if (docInfo.state === 'new') return { ok: false, reason: '존재하지 않는 문서입니다.' };
+    static canHide(docInfo: Info | null, userGroup: Group): WikiResponse<void> {
+        if (!docInfo || docInfo.state === 'new')
+            return { ok: false, reason: '존재하지 않는 문서입니다.' };
         if (docInfo.state === 'hidden') return { ok: false, reason: '이미 숨겨진 문서입니다.' };
 
         if (docInfo.state === 'normal')
@@ -237,8 +238,9 @@ export default class AuthorityManager {
         return { ok: false, reason: '숨김 권한이 없습니다.' };
     }
 
-    static canShow(docInfo: Info, userGroup: Group): WikiResponse<void> {
-        if (docInfo.state === 'new') return { ok: false, reason: '존재하지 않는 문서입니다.' };
+    static canShow(docInfo: Info | null, userGroup: Group): WikiResponse<void> {
+        if (!docInfo || docInfo.state === 'new')
+            return { ok: false, reason: '존재하지 않는 문서입니다.' };
         if (docInfo.state !== 'hidden') return { ok: false, reason: '이미 숨겨진 문서입니다.' };
 
         if (AuthorityManager.isAuthorized(docInfo.authority['change_state'] || [], userGroup))
@@ -261,7 +263,8 @@ export default class AuthorityManager {
         duration: number,
         userGroup: Group,
     ): WikiResponse<void> {
-        if (duration <= 0) return { ok: false, reason: '차단 기간은 0분보다 커야 합니다.' };
+        if (duration < 0)
+            return { ok: false, reason: '제재 기간은 0분 이상이어야 합니다. (0은 영구)' };
         if (
             ['manager', 'system', 'dev'].includes(userGroup) &&
             !['system', 'dev'].includes(penalizedGroup)

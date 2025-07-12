@@ -43,12 +43,12 @@ export default class WikiManager {
         const systemUser: User = AuthorityManager.getSystemUser();
 
         const uncategorizedDoc = DocManager.getEmptyDocByFullTitle('분류:미분류');
-        uncategorizedDoc.authority['edit'] = ['system', 'manager', 'dev'];
+        uncategorizedDoc.authority['edit'] = ['manager', 'dev'];
         uncategorizedDoc.markup = '[#[분류]]';
 
         const categorizedDoc = DocManager.getEmptyDocByFullTitle('분류:분류');
         categorizedDoc.categorizedArr = [uncategorizedDoc.docId];
-        categorizedDoc.authority['edit'] = ['system', 'manager', 'dev'];
+        categorizedDoc.authority['edit'] = ['manager', 'dev'];
         categorizedDoc.markup = '';
 
         await DocManager.createDocIgnoringCategory(uncategorizedDoc, systemUser);
@@ -121,7 +121,7 @@ export default class WikiManager {
         revision = -1,
     ): Promise<WikiResponse<Doc>> {
         const doc = await DocManager.getDocByFullTitle(fullTitle, revision);
-        if (!doc || doc.state === 'deleted')
+        if (!doc || (doc.state === 'deleted' && revision === -1))
             return {
                 ok: false,
                 reason: '문서가 존재하지 않습니다.',

@@ -15,7 +15,7 @@ export default class LogController {
     // ============ Doc Logs ==============
 
     static async setDocLogByDocLog(docLog: DocLog): Promise<DocLogDoc> {
-        const docLogDoc = new DocLogModel<DocLog>(docLog);
+        const docLogDoc = new DocLogModel(docLog);
         return await docLogDoc.save();
     }
 
@@ -64,7 +64,7 @@ export default class LogController {
     // ============ User Logs ==============
 
     static async setUserLogByUserLog(userLog: UserLog): Promise<UserLogDoc> {
-        const log = new UserLogModel<UserLog>(userLog);
+        const log = new UserLogModel(userLog);
         return await log.save();
     }
 

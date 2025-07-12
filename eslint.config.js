@@ -14,19 +14,22 @@ export default [
                 ecmaVersion: 'latest',
                 sourceType: 'module',
             },
-            globals: { ...globals.browser, ...globals.node }
+            globals: { ...globals.browser, ...globals.node },
         },
         plugins: {
             '@typescript-eslint': ts,
         },
         rules: {
             ...ts.configs.recommended.rules,
-			'no-undef': 'off',
-            '@typescript-eslint/no-unused-vars': ['warn', {
-                argsIgnorePattern: '^_',        // 함수 인자 무시
-                varsIgnorePattern: '^_',        // 일반 변수 무시
-                caughtErrorsIgnorePattern: '^_', // try-catch 에러 변수 무시
-            }],
+            'no-undef': 'off',
+            '@typescript-eslint/no-unused-vars': [
+                'warn',
+                {
+                    argsIgnorePattern: '^_', // 함수 인자 무시
+                    varsIgnorePattern: '^_', // 일반 변수 무시
+                    caughtErrorsIgnorePattern: '^_', // try-catch 에러 변수 무시
+                },
+            ],
         },
     },
     {
@@ -34,4 +37,3 @@ export default [
     },
     prettier,
 ];
-

@@ -318,11 +318,10 @@ export async function getRecentWriteLogs(count: number = 10): Promise<Array<DocL
 // ================ Log Modules ================
 export async function getDocLogsByFullTitle(
     fullTitle: string,
-    user: User,
     page: number,
     cnt = 10,
 ): Promise<WikiResponse<DocLogDoc[]>> {
-    return await LogManager.getDocLogsByFullTitle(fullTitle, user, page, cnt);
+    return await LogManager.getDocLogsByFullTitle(fullTitle, page, cnt);
 }
 
 export async function getDocLogsByUserName(

@@ -19,8 +19,6 @@ import MetaController from '../controllers/meta.js';
 import LogController from '../controllers/log.js';
 import InfoController from '../controllers/info.js';
 
-import AuthorityManager from './authority.js';
-
 import GeneralUtils from '../utils/general.js';
 
 export default class LogManager {
@@ -146,7 +144,6 @@ export default class LogManager {
 
     static async getDocLogsByFullTitle(
         fullTitle: string,
-        user: User,
         page: number,
         cnt = 10,
     ): Promise<WikiResponse<DocLogDoc[]>> {
@@ -154,10 +151,6 @@ export default class LogManager {
 
         const docInfo = await InfoController.getInfoByFullTitle(fullTitle);
         if (!docInfo) return { ok: false, reason: '문서가 존재하지 않습니다.' };
-
-        const res_read = AuthorityManager.canRead(docInfo, user.group);
-
-        if (!res_read.ok) return res_read;
 
         const skip = (page - 1) * cnt;
         const limit = cnt;

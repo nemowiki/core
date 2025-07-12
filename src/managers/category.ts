@@ -105,7 +105,7 @@ export default class CategoryManager {
             const addCategoryInfoArr =
                 await InfoController.getInfosByFullTitleArr(addCategoryFullTitleArr);
 
-            const addPromiseArr: Promise<InfoDoc|void>[] = [];
+            const addPromiseArr: Promise<InfoDoc | void>[] = [];
             const newCategoryIdArr: DocId[] = [];
 
             for (let idx = 0; idx < addCategoryInfoArr.length; idx++) {
