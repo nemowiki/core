@@ -94,9 +94,13 @@ export default class WikiTranslator {
         return Array.from(categoryTitleSet);
     }
 
-    static toCategory(content: string): string {
+    static toCategory(content: string, fullTitle: string): string {
         const categoryTitleArr = this.getCategoryTitleArr(content);
         content = content.replaceAll(this.categoryReg, '');
+
+        if (TitleUtils.getPrefixAndTitleByFullTitle(fullTitle)[0] === '분류') {
+            content = '\n' + content;
+        }
 
         if (categoryTitleArr.length === 0) {
             return '분류: <a title="분류:미분류" href="분류:미분류">미분류</a><hr/>' + content;
@@ -158,7 +162,7 @@ export default class WikiTranslator {
             content = this.toExternalAnchor(content);
 
             // Ignore Category for the root category.
-            if (fullTitle !== '분류:분류') content = this.toCategory(content);
+            if (fullTitle !== '분류:분류') content = this.toCategory(content, fullTitle);
 
             if (filePathArr) content = this.toFile(content, filePathArr);
         }
