@@ -73,7 +73,7 @@ export default class AuthorityManager {
     // }
 
     static isAuthorized(groupArr: Group[], group: Group): boolean {
-        if (group === 'blocked') return false;
+        if (group === 'blocked' || group === 'guest') return false;
         if (group === 'system') return true;
 
         if (!groupArr) return false;
@@ -95,6 +95,10 @@ export default class AuthorityManager {
 
         // 차단된 사용자도 문서 열람은 가능
         if (userGroup === 'blocked' && (docInfo.authority['read'] || []).includes('any'))
+            return { ok: true };
+
+        // 게스트는 문서 열람'만' 가능
+        if (userGroup === 'guest' && (docInfo.authority['read'] || []).includes('any'))
             return { ok: true };
 
         if (AuthorityManager.isAuthorized(docInfo.authority['read'] || [], userGroup))
