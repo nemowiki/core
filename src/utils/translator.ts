@@ -7,11 +7,13 @@ export default class WikiTranslator {
     static categoryReg: RegExp;
     static fileReg: RegExp;
     static externalAnchorReg: RegExp;
+    static splitParamReg: RegExp;
 
     static initTranslator(): void {
         this.categoryReg = Translator.createRegExp(/\[#\[/, /(.+?)/, /]](?:\n)?/);
         this.fileReg = Translator.createRegExp(/\[@\[/, /(.+?)/, /]](?:\n)?/);
         this.externalAnchorReg = Translator.createRegExp(/\[(https)\[/, /(.+?)/, /\]\]/);
+        this.splitParamReg = Translator.createRegExp(/=/);
         Translator.parseAnchorAttributes = (link: string, name?: string) => {
             if (!name) name = link;
             let title = link;
@@ -128,17 +130,30 @@ export default class WikiTranslator {
     static toFile(content: string, filePathArr: Array<string | null>): string {
         let i = 0;
         content = content.replace(this.fileReg, (_match, captured) => {
-            let [fileTitle, anchorTitle] = [
+            let [fileTitle, fileParams] = [
                 captured.split(Translator.splitReg)[0].trim(),
-                captured.split(Translator.splitReg).slice(1).join('|').trim(),
+                captured.split(Translator.splitReg).slice(1),
             ];
-            if (anchorTitle === '') anchorTitle = '파일:' + fileTitle;
+
+            const fileParamsMap: Map<string, string> = new Map();
+            fileParams.forEach((param: string) => {
+                const [key, value] = [
+                    param.split(this.splitParamReg)[0].trim(),
+                    param.split(this.splitParamReg).slice(1).join('=').trim(),
+                ];
+                fileParamsMap.set(key, value);
+            });
+
+            const anchorTitle = fileParamsMap.get('a') || '파일:' + fileTitle;
+            const imgStyle = fileParamsMap.get('s')
+                ? `style="width: ${fileParamsMap.get('s')}rem"`
+                : '';
 
             const filePath = filePathArr[i++];
             if (!filePath) {
                 return `<a title="${anchorTitle}" href="${anchorTitle}">파일:${fileTitle}</a>`;
             } else {
-                return `<a title="${anchorTitle}" href="${anchorTitle}"><img src="${filePath}" alt="${fileTitle}"/></a>`;
+                return `<a title="${anchorTitle}" href="${anchorTitle}"><img src="${filePath}" alt="${fileTitle}" ${imgStyle}/></a>`;
             }
         });
         return content;
@@ -157,6 +172,9 @@ export default class WikiTranslator {
 
         content = Translator.preprocess(content, false);
 
+        content = Translator.toInlines(content);
+        content = Translator.toBlocks(content);
+
         // If fullTitle is undefined, do not translate the wiki-kind grammar such as category.
         if (fullTitle) {
             content = this.toExternalAnchor(content);
@@ -166,9 +184,6 @@ export default class WikiTranslator {
 
             if (filePathArr) content = this.toFile(content, filePathArr);
         }
-
-        content = Translator.toInlines(content);
-        content = Translator.toBlocks(content);
 
         content = Translator.postprocess(content);
 

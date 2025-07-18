@@ -101,7 +101,7 @@ export default class WikiManager {
         let fileMarkup = '';
 
         if (doc.type === 'file') {
-            fileMarkup = `[@[${TitleUtils.getPrefixAndTitleByFullTitle(doc.fullTitle)[1]}]]\n`;
+            fileMarkup = `[@[${TitleUtils.getPrefixAndTitleByFullTitle(doc.fullTitle)[1]}]]\n\n`;
         }
 
         const fileTitleArr = WikiTranslator.getFileTitleArr(fileMarkup + doc.markup);
