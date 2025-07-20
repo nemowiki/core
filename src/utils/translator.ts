@@ -11,6 +11,7 @@ export default class WikiTranslator {
     static externalAnchorReg: RegExp;
     static splitParamReg: RegExp;
     static paramReg: RegExp;
+    static hashReg: RegExp;
 
     static initTranslator(): void {
         this.categoryReg = Translator.createRegExp(/\[분류\[/, /(.+?)/, /]](?:\n)?/);
@@ -18,14 +19,29 @@ export default class WikiTranslator {
         this.redirectReg = Translator.createRegExp(/\[넘겨주기\[/, /(.+?)/, /]](?:\n)?/);
         this.templateReg = Translator.createRegExp(/\[틀\[/, /(.+?)/, /]](?:\n)?/);
         this.externalAnchorReg = Translator.createRegExp(/\[(https)\[/, /(.+?)/, /\]\]/);
+        this.hashReg = Translator.createRegExp(/#/);
         this.splitParamReg = Translator.createRegExp(/=/);
         this.paramReg = Translator.createRegExp(/@@/, /(.+?)/, /@@/);
         Translator.parseAnchorAttributes = (link: string, name?: string) => {
             if (!name) name = link;
             let title = link;
-            link = link.replaceAll(/(?<!\\)#/g, '<#>');
+            link = link.replaceAll(this.hashReg, '<#>');
             return [title, link, name];
         };
+        Translator.toEscape = this.toEscape;
+        Translator.toUnescape = this.toUnescape;
+    }
+
+    static toUnescape(content: string): string {
+        const reg = /\\(\\|\*|\/|~|_|-|#|\[|\]|\(|\)|\{|\}|,|\^|:|\||@)/g;
+        content = content.replaceAll(reg, '$1');
+        return content;
+    }
+
+    static toEscape(content: string): string {
+        const reg = /(\\|\*|\/|~|_|-|#|\[|\]|\(|\)|\{|\}|,|\^|:|\||@)/g;
+        content = content.replaceAll(reg, '\\$1');
+        return content;
     }
 
     static getTitleAndParamsMap(captured: string): [string, Map<string, string>] {
@@ -97,7 +113,7 @@ export default class WikiTranslator {
             const fullTitleWithHashAndEscape = match[1].split(Translator.splitReg)[0].trim();
 
             const fullTitleWithHash = Translator.toUnescape(
-                fullTitleWithHashAndEscape.replaceAll(/(?<!\\)#/g, '<#>'),
+                fullTitleWithHashAndEscape.replaceAll(this.hashReg, '<#>'),
             );
 
             const splittedFullTitle = fullTitleWithHash.split('<#>');
@@ -226,10 +242,6 @@ export default class WikiTranslator {
             break; // Only one redirect is allowed
         }
         return redirectFullTitleArr;
-    }
-
-    static toEscape(content: string): string {
-        return Translator.toEscape(content);
     }
 
     static translate(
