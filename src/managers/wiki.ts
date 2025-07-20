@@ -106,19 +106,19 @@ export default class WikiManager {
         }
 
         const templateTitleArr = WikiTranslator.getTemplateTitleArr(fileMarkup + doc.markup);
-        const templateMarkupArr = await TemplateManager.getTemplateMarkupByTitleArr(templateTitleArr, user);
-        
-        const totalMarkup = fileMarkup + WikiTranslator.toTemplate(doc.markup, templateMarkupArr) + categoryMarkup;
+        const templateMarkupArr = await TemplateManager.getTemplateMarkupByTitleArr(
+            templateTitleArr,
+            user,
+        );
+
+        const totalMarkup =
+            fileMarkup + WikiTranslator.toTemplate(doc.markup, templateMarkupArr) + categoryMarkup;
 
         const fileTitleArr = WikiTranslator.getFileTitleArr(totalMarkup);
         const filePathArr = await FileManager.getFilePathsByTitleArr(fileTitleArr, user);
 
         // Combine
-        return WikiTranslator.translate(
-            totalMarkup,
-            doc.fullTitle,
-            filePathArr,
-        );
+        return WikiTranslator.translate(totalMarkup, doc.fullTitle, filePathArr);
     }
 
     static async readDocByFullTitle(

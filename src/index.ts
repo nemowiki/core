@@ -353,9 +353,7 @@ export async function getAllFullTitles(): Promise<string[]> {
 }
 
 export async function createBacklinkHtmlByFullTitle(fullTitle: string): Promise<string | null> {
-    const markup = await BacklinkManager.createBacklinkMarkupByFullTitle(fullTitle);
-    if (!markup) return null;
-    return WikiTranslator.translate(markup);
+    return await BacklinkManager.createBacklinkHtmlByFullTitle(fullTitle);
 }
 
 export function getRedirectFullTitleByMarkup(markup: string): string | null {

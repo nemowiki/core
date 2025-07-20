@@ -8,7 +8,7 @@ import WikiTranslator from '../utils/translator.js';
 import TitleUtils from '../utils/title.js';
 
 export default class BacklinkManager {
-    static async createBacklinkMarkupByFullTitle(fullTitle: string): Promise<string | null> {
+    static async createBacklinkHtmlByFullTitle(fullTitle: string): Promise<string | null> {
         const backlink = await BacklinkController.getBacklinkByFullTitle(fullTitle);
         if (!backlink) return null;
         let content = '';
@@ -24,6 +24,13 @@ export default class BacklinkManager {
             backlink.redirectedFromArr,
             '이 문서로 이동되는',
         );
+
+        content = WikiTranslator.translate(content);
+        content = content.replaceAll(
+            /(?<=<a title="(?:.(?!<\/a>))+?" href=")(.+?)(?=">.+?<\/a>)/g,
+            '$1?redirect=no',
+        );
+
         return content;
     }
 

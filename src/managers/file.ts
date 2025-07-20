@@ -16,7 +16,10 @@ export default class FileManager {
         await StorageManager.deleteImageFromStorage(key);
     }
 
-    static async getFilePathsByTitleArr(titleArr: string[], user: User): Promise<Array<string | null>> {
+    static async getFilePathsByTitleArr(
+        titleArr: string[],
+        user: User,
+    ): Promise<Array<string | null>> {
         const fullTitleArr = TitleUtils.setPrefixToTitleArr(titleArr, '파일');
         const fileInfoArr = await InfoController.getInfosByFullTitleArr(fullTitleArr);
         const filePathArr = fileInfoArr.map(fileInfo => {

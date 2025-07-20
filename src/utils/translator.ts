@@ -154,7 +154,6 @@ export default class WikiTranslator {
     static toFile(content: string, filePathArr: Array<string | null>): string {
         let i = 0;
         content = content.replace(this.fileReg, (_match, captured) => {
-
             const [fileTitle, fileParamsMap] = this.getTitleAndParamsMap(captured);
             const anchorTitle = fileParamsMap.get('a') || '파일:' + fileTitle;
             const imgStyle = !Number(fileParamsMap.get('s'))
@@ -193,20 +192,27 @@ export default class WikiTranslator {
                 templateMarkup = templateMarkup.replaceAll(this.redirectReg, '');
 
                 const defaultValueMap: Map<string, string> = new Map();
-                templateMarkup = templateMarkup.replace(this.paramReg, (_match, paramKeyAndDefault) => {
-                    const paramKey = paramKeyAndDefault.split(this.splitParamReg)[0].trim();
-                    let paramValue = templateParamsMap.get(paramKey);
+                templateMarkup = templateMarkup.replace(
+                    this.paramReg,
+                    (_match, paramKeyAndDefault) => {
+                        const paramKey = paramKeyAndDefault.split(this.splitParamReg)[0].trim();
+                        let paramValue = templateParamsMap.get(paramKey);
 
-                    if (paramValue) return paramValue;
-                    else {
-                        if (defaultValueMap.has(paramKey)) return defaultValueMap.get(paramKey);
+                        if (paramValue) return paramValue;
                         else {
-                            const defaultValue = paramKeyAndDefault.split(this.splitParamReg).slice(1).join('=').trim();
-                            defaultValueMap.set(paramKey, defaultValue);
-                            return defaultValue;
+                            if (defaultValueMap.has(paramKey)) return defaultValueMap.get(paramKey);
+                            else {
+                                const defaultValue = paramKeyAndDefault
+                                    .split(this.splitParamReg)
+                                    .slice(1)
+                                    .join('=')
+                                    .trim();
+                                defaultValueMap.set(paramKey, defaultValue);
+                                return defaultValue;
+                            }
                         }
-                    }
-                });
+                    },
+                );
                 return templateMarkup + '\n';
             }
         });
@@ -246,7 +252,6 @@ export default class WikiTranslator {
 
             // Ignore Category for the root category.
             if (fullTitle !== '분류:분류') content = this.toCategory(content, fullTitle);
-
         }
 
         content = Translator.postprocess(content);
