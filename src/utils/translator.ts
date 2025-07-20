@@ -6,20 +6,44 @@ import GeneralUtils from './general.js';
 export default class WikiTranslator {
     static categoryReg: RegExp;
     static fileReg: RegExp;
+    static redirectReg: RegExp;
+    static templateReg: RegExp;
     static externalAnchorReg: RegExp;
     static splitParamReg: RegExp;
+    static paramReg: RegExp;
 
     static initTranslator(): void {
-        this.categoryReg = Translator.createRegExp(/\[#\[/, /(.+?)/, /]](?:\n)?/);
-        this.fileReg = Translator.createRegExp(/\[@\[/, /(.+?)/, /]](?:\n)?/);
+        this.categoryReg = Translator.createRegExp(/\[분류\[/, /(.+?)/, /]](?:\n)?/);
+        this.fileReg = Translator.createRegExp(/\[파일\[/, /(.+?)/, /]](?:\n)?/);
+        this.redirectReg = Translator.createRegExp(/\[넘겨주기\[/, /(.+?)/, /]](?:\n)?/);
+        this.templateReg = Translator.createRegExp(/\[틀\[/, /(.+?)/, /]](?:\n)?/);
         this.externalAnchorReg = Translator.createRegExp(/\[(https)\[/, /(.+?)/, /\]\]/);
         this.splitParamReg = Translator.createRegExp(/=/);
+        this.paramReg = Translator.createRegExp(/@@/, /(.+?)/, /@@/);
         Translator.parseAnchorAttributes = (link: string, name?: string) => {
             if (!name) name = link;
             let title = link;
             link = link.replaceAll(/(?<!\\)#/g, '<#>');
             return [title, link, name];
         };
+    }
+
+    static getTitleAndParamsMap(captured: string): [string, Map<string, string>] {
+        let [title, params] = [
+            captured.split(Translator.splitReg)[0].trim(),
+            captured.split(Translator.splitReg).slice(1),
+        ];
+
+        const paramsMap: Map<string, string> = new Map();
+        params.forEach((param: string) => {
+            const [key, value] = [
+                param.split(this.splitParamReg)[0].trim(),
+                param.split(this.splitParamReg).slice(1).join('=').trim(),
+            ];
+            if (key && !paramsMap.has(key)) paramsMap.set(key, value);
+        });
+
+        return [title, paramsMap];
     }
 
     static parseAnchorLink(content: string): string {
@@ -130,24 +154,12 @@ export default class WikiTranslator {
     static toFile(content: string, filePathArr: Array<string | null>): string {
         let i = 0;
         content = content.replace(this.fileReg, (_match, captured) => {
-            let [fileTitle, fileParams] = [
-                captured.split(Translator.splitReg)[0].trim(),
-                captured.split(Translator.splitReg).slice(1),
-            ];
 
-            const fileParamsMap: Map<string, string> = new Map();
-            fileParams.forEach((param: string) => {
-                const [key, value] = [
-                    param.split(this.splitParamReg)[0].trim(),
-                    param.split(this.splitParamReg).slice(1).join('=').trim(),
-                ];
-                fileParamsMap.set(key, value);
-            });
-
+            const [fileTitle, fileParamsMap] = this.getTitleAndParamsMap(captured);
             const anchorTitle = fileParamsMap.get('a') || '파일:' + fileTitle;
-            const imgStyle = fileParamsMap.get('s')
-                ? `style="width: ${fileParamsMap.get('s')}rem"`
-                : '';
+            const imgStyle = !Number(fileParamsMap.get('s'))
+                ? ''
+                : `style="width: ${fileParamsMap.get('s')}rem"`;
 
             const filePath = filePathArr[i++];
             if (!filePath) {
@@ -157,6 +169,57 @@ export default class WikiTranslator {
             }
         });
         return content;
+    }
+
+    static getTemplateTitleArr(content: string): string[] {
+        const templateTitleArr: string[] = [];
+        for (let match of content.matchAll(this.templateReg)) {
+            templateTitleArr.push(match[1].split(Translator.splitReg)[0].trim());
+        }
+        return templateTitleArr;
+    }
+
+    static toTemplate(content: string, templateMarkupArr: Array<string | null>): string {
+        let i = 0;
+        content = content.replace(this.templateReg, (_match, captured) => {
+            const [templateTitle, templateParamsMap] = this.getTitleAndParamsMap(captured);
+            let templateMarkup = templateMarkupArr[i++];
+
+            if (!templateMarkup) {
+                return `[[틀:${templateTitle}]]`;
+            } else {
+                templateMarkup = templateMarkup.replaceAll(this.categoryReg, '');
+                templateMarkup = templateMarkup.replaceAll(this.templateReg, '');
+                templateMarkup = templateMarkup.replaceAll(this.redirectReg, '');
+
+                const defaultValueMap: Map<string, string> = new Map();
+                templateMarkup = templateMarkup.replace(this.paramReg, (_match, paramKeyAndDefault) => {
+                    const paramKey = paramKeyAndDefault.split(this.splitParamReg)[0].trim();
+                    let paramValue = templateParamsMap.get(paramKey);
+
+                    if (paramValue) return paramValue;
+                    else {
+                        if (defaultValueMap.has(paramKey)) return defaultValueMap.get(paramKey);
+                        else {
+                            const defaultValue = paramKeyAndDefault.split(this.splitParamReg).slice(1).join('=').trim();
+                            defaultValueMap.set(paramKey, defaultValue);
+                            return defaultValue;
+                        }
+                    }
+                });
+                return templateMarkup + '\n';
+            }
+        });
+        return content;
+    }
+
+    static getRedirectFullTitleArr(content: string): string[] {
+        const redirectFullTitleArr: string[] = [];
+        for (let match of content.matchAll(this.redirectReg)) {
+            redirectFullTitleArr.push(match[1]);
+            break; // Only one redirect is allowed
+        }
+        return redirectFullTitleArr;
     }
 
     static toEscape(content: string): string {
@@ -179,10 +242,11 @@ export default class WikiTranslator {
         if (fullTitle) {
             content = this.toExternalAnchor(content);
 
+            if (filePathArr) content = this.toFile(content, filePathArr);
+
             // Ignore Category for the root category.
             if (fullTitle !== '분류:분류') content = this.toCategory(content, fullTitle);
 
-            if (filePathArr) content = this.toFile(content, filePathArr);
         }
 
         content = Translator.postprocess(content);

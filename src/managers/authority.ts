@@ -63,8 +63,18 @@ export default class AuthorityManager {
                 change_authority: ['manager', 'dev'],
                 change_state: ['none'],
             };
+        } else if (docType === 'template') {
+            return {
+                read: ['any'],
+                create: ['any'],
+                edit: ['any'],
+                move: ['any'],
+                delete: ['any'],
+                change_authority: ['manager', 'dev'],
+                change_state: ['manager', 'dev'],
+            };
         } else {
-            throw new Error('Unexpected Doctype!');
+            throw new Error('존재하지 않는 문서 타입입니다.');
         }
     }
 

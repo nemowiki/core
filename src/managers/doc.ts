@@ -55,8 +55,10 @@ export default class DocManager {
             return this.#getEmptyCategoryDocByFullTitle(fullTitle);
         } else if (docType === 'file') {
             return this.#getEmptyFileDocByFullTitle(fullTitle);
+        } else if (docType === 'template') {
+            return this.#getEmptyTemplateDocByFullTitle(fullTitle);
         } else {
-            throw new Error('Unexpected DocType!');
+            throw new Error('존재하지 않는 문서 타입입니다.');
         }
     }
 
@@ -96,7 +98,7 @@ export default class DocManager {
             state: 'new',
             filePath: '',
             revision: 0,
-            markup: '[#[파일]]\n:[**출처**][출처를 입력해 주세요.]\n[**라이선스**][라이선스를 입력해 주세요.]\n[**설명**][파일에 대해 간단한 설명을 입력해 주세요.]:',
+            markup: '[분류[파일]]\n:[**출처**][출처를 입력해 주세요.]\n[**라이선스**][라이선스를 입력해 주세요.]\n[**설명**][파일에 대해 간단한 설명을 입력해 주세요.]:',
         };
     }
 
@@ -110,7 +112,20 @@ export default class DocManager {
             state: 'new',
             categorizedArr: [],
             revision: 0,
-            markup: '[#[미분류]]',
+            markup: '[분류[미분류]]',
+        };
+    }
+
+    static #getEmptyTemplateDocByFullTitle(fullTitle: string): Doc {
+        const docId = CryptoUtils.createNewId() as DocId;
+        return {
+            docId,
+            type: 'template',
+            fullTitle,
+            authority: AuthorityManager.getDefaultAuthorityByDocType('template'),
+            state: 'new',
+            revision: 0,
+            markup: '[분류[틀]]',
         };
     }
 

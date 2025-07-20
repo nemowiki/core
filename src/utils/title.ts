@@ -15,7 +15,7 @@ export default class TitleUtils {
         return decodeURIComponent(fullTitle).trim();
     }
 
-    static prefixArr = ['일반', '분류', '위키', '파일'];
+    static prefixArr = ['일반', '분류', '위키', '파일', '틀'];
     static getPrefixAndTitleByFullTitle(fullTitle: string): [string, string] {
         let prefix = '일반';
         let title = fullTitle;
@@ -37,6 +37,8 @@ export default class TitleUtils {
             return 'wiki';
         } else if (prefix === '파일') {
             return 'file';
+        } else if (prefix === '틀') {
+            return 'template';
         } else {
             return 'general';
         }

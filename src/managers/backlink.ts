@@ -33,6 +33,8 @@ export default class BacklinkManager {
     ): Promise<void> {
         const linkingFullTitle = nextDoc.fullTitle;
 
+        // Link
+
         const prevLinkArr = WikiTranslator.getAnchorFullTitleArr(prevDoc?.markup || '');
         const nextLinkArr = WikiTranslator.getAnchorFullTitleArr(nextDoc.markup);
 
@@ -49,14 +51,29 @@ export default class BacklinkManager {
             await BacklinkController.unlinkFromFormerToLatter(linkingFullTitle, fullTitle);
         }
 
-        const prevEmbedArr = TitleUtils.setPrefixToTitleArr(
-            WikiTranslator.getFileTitleArr(prevDoc?.markup || ''),
-            '파일',
-        );
-        const nextEmbedArr = TitleUtils.setPrefixToTitleArr(
-            WikiTranslator.getFileTitleArr(nextDoc.markup),
-            '파일',
-        );
+        // Embed
+
+        const prevEmbedArr = [
+            ...TitleUtils.setPrefixToTitleArr(
+                WikiTranslator.getFileTitleArr(prevDoc?.markup || ''),
+                '파일',
+            ),
+            ...TitleUtils.setPrefixToTitleArr(
+                WikiTranslator.getTemplateTitleArr(prevDoc?.markup || ''),
+                '틀',
+            ),
+        ];
+
+        const nextEmbedArr = [
+            ...TitleUtils.setPrefixToTitleArr(
+                WikiTranslator.getFileTitleArr(nextDoc.markup),
+                '파일',
+            ),
+            ...TitleUtils.setPrefixToTitleArr(
+                WikiTranslator.getTemplateTitleArr(nextDoc.markup),
+                '틀',
+            ),
+        ];
 
         const addedEmbedArr = GeneralUtils.getDiffArr(prevEmbedArr, nextEmbedArr);
         const removedEmbedArr = GeneralUtils.getDiffArr(nextEmbedArr, prevEmbedArr);
@@ -69,6 +86,24 @@ export default class BacklinkManager {
 
         for (let fullTitle of removedEmbedArr) {
             await BacklinkController.unembedFromFormerToLatter(linkingFullTitle, fullTitle);
+        }
+
+        // Redirect
+
+        const prevRedirectArr = WikiTranslator.getRedirectFullTitleArr(prevDoc?.markup || '');
+        const nextRedirectArr = WikiTranslator.getRedirectFullTitleArr(nextDoc.markup);
+
+        const addedRedirectArr = GeneralUtils.getDiffArr(prevRedirectArr, nextRedirectArr);
+        const removedRedirectArr = GeneralUtils.getDiffArr(nextRedirectArr, prevRedirectArr);
+
+        // TODO: Improve it by using bulkwrite
+
+        for (let fullTitle of addedRedirectArr) {
+            await BacklinkController.redirectFromFormerToLatter(linkingFullTitle, fullTitle);
+        }
+
+        for (let fullTitle of removedRedirectArr) {
+            await BacklinkController.unredirectFromFormerToLatter(linkingFullTitle, fullTitle);
         }
     }
 }

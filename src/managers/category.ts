@@ -61,7 +61,7 @@ export default class CategoryManager {
         const categoryTitleArr = WikiTranslator.getCategoryTitleArr(markup);
 
         if (categoryTitleArr.length === 0 && fullTitle !== '분류:분류') {
-            markup = '[#[미분류]]\n' + markup;
+            markup = '[분류[미분류]]\n' + markup;
         } else if (categoryTitleArr.includes('미분류') && categoryTitleArr.length >= 2) {
             throw new Error(
                 'A document cannot be categorized into both Uncategorized-category and others at the same time!',
@@ -126,7 +126,7 @@ export default class CategoryManager {
                         throw new Error('The newDoc must be a category doc!');
 
                     newDoc.categorizedArr.push(docId);
-                    newDoc.markup = '[#[미분류]]';
+                    newDoc.markup = '[분류[미분류]]';
 
                     newCategoryIdArr.push(newDoc.docId);
                     addPromiseArr.push(

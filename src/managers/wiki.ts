@@ -19,6 +19,7 @@ import LogManager from './log.js';
 import FileManager from './file.js';
 import DBManager from './db.js';
 import StorageManager from './storage.js';
+import TemplateManager from './template.js';
 
 import WikiTranslator from '../utils/translator.js';
 import TitleUtils from '../utils/title.js';
@@ -87,7 +88,7 @@ export default class WikiManager {
         }
     }
 
-    static async createHTMLByDoc(doc: Doc): Promise<string> {
+    static async createHTMLByDoc(doc: Doc, user: User): Promise<string> {
         // Category Markup
         let categoryMarkup = '';
 
@@ -101,15 +102,20 @@ export default class WikiManager {
         let fileMarkup = '';
 
         if (doc.type === 'file') {
-            fileMarkup = `[@[${TitleUtils.getPrefixAndTitleByFullTitle(doc.fullTitle)[1]}]]\n\n`;
+            fileMarkup = `[파일[${TitleUtils.getPrefixAndTitleByFullTitle(doc.fullTitle)[1]}]]\n\n`;
         }
 
-        const fileTitleArr = WikiTranslator.getFileTitleArr(fileMarkup + doc.markup);
-        const filePathArr = await FileManager.getFilePathsByTitleArr(fileTitleArr);
+        const templateTitleArr = WikiTranslator.getTemplateTitleArr(fileMarkup + doc.markup);
+        const templateMarkupArr = await TemplateManager.getTemplateMarkupByTitleArr(templateTitleArr, user);
+        
+        const totalMarkup = fileMarkup + WikiTranslator.toTemplate(doc.markup, templateMarkupArr) + categoryMarkup;
+
+        const fileTitleArr = WikiTranslator.getFileTitleArr(totalMarkup);
+        const filePathArr = await FileManager.getFilePathsByTitleArr(fileTitleArr, user);
 
         // Combine
         return WikiTranslator.translate(
-            fileMarkup + doc.markup + categoryMarkup,
+            totalMarkup,
             doc.fullTitle,
             filePathArr,
         );
@@ -130,7 +136,7 @@ export default class WikiManager {
             const result = AuthorityManager.canRead(doc, user.group);
             if (!result.ok) return { ok: false, reason: result.reason };
 
-            doc.html = await this.createHTMLByDoc(doc);
+            doc.html = await this.createHTMLByDoc(doc, user);
             return { ok: true, value: doc };
         }
     }

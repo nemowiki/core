@@ -303,10 +303,10 @@ export async function searchDoc(
     };
 }
 
-export async function previewDoc(doc: Doc): Promise<WikiResponse<string>> {
+export async function previewDoc(doc: Doc, user: User): Promise<WikiResponse<string>> {
     return {
         ok: true,
-        value: await WikiManager.createHTMLByDoc(doc),
+        value: await WikiManager.createHTMLByDoc(doc, user),
     };
 }
 
@@ -356,6 +356,10 @@ export async function createBacklinkHtmlByFullTitle(fullTitle: string): Promise<
     const markup = await BacklinkManager.createBacklinkMarkupByFullTitle(fullTitle);
     if (!markup) return null;
     return WikiTranslator.translate(markup);
+}
+
+export function getRedirectFullTitleByMarkup(markup: string): string | null {
+    return WikiTranslator.getRedirectFullTitleArr(markup)[0] || null;
 }
 
 // export function translateMarkup(markup: string, fullTitle: string): string {
